@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from database import engine, Base
 import models
@@ -13,7 +14,39 @@ from analytics_routes import router as analytics_router
 from notification_routes import router as notification_router
 
 
+# Create missing tables
 Base.metadata.create_all(bind=engine)
+
+
+# Update existing users table with required HRMS columns
+with engine.begin() as connection:
+    connection.execute(
+        text(
+            """
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS phone VARCHAR;
+            """
+        )
+    )
+
+    connection.execute(
+        text(
+            """
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS role VARCHAR DEFAULT 'employee';
+            """
+        )
+    )
+
+    connection.execute(
+        text(
+            """
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS profile_image VARCHAR;
+            """
+        )
+    )
+
 
 app = FastAPI(title="HRMS API")
 
