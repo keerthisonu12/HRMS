@@ -11,6 +11,8 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import "../styles/theme.css";
 
+const API = "https://worknest-backend-xesk.onrender.com";
+
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -21,7 +23,7 @@ function Sidebar() {
 
     try {
       if (token) {
-        await fetch("http://127.0.0.1:8000/logout", {
+        await fetch(`${API}/logout`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,

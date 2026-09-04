@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import "../styles/theme.css";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://worknest-backend-xesk.onrender.com";
 
 function Reports() {
   const role = localStorage.getItem("userRole");
@@ -70,7 +70,7 @@ function Reports() {
         method: "POST",
         headers: getHeaders(true),
         body: JSON.stringify({
-          employee_email: email,
+          employee_email: role === "hr" ? form.employee_email : email,
           project: form.project,
           start_date: form.start_date,
           end_date: form.end_date,

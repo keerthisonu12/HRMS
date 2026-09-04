@@ -5,19 +5,15 @@ import {
   X,
   CalendarDays,
   Gift,
-  PartyPopper,
   Megaphone,
   Sparkles,
   Flower2,
   Cake,
   Sun,
-  Heart,
-  Star,
-  ChevronDown,
 } from "lucide-react";
 import "../styles/theme.css";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://worknest-backend-xesk.onrender.com";
 
 function Notifications() {
   const role = localStorage.getItem("userRole");
@@ -135,47 +131,19 @@ function Notifications() {
           }}
         />
 
-        <div
-          style={{
-            position: "absolute",
-            top: "12px",
-            left: "12px",
-            fontSize: "23px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "12px", left: "12px", fontSize: "23px" }}>
           🌸
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            top: "8px",
-            right: "15px",
-            fontSize: "23px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "8px", right: "15px", fontSize: "23px" }}>
           🌺
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            bottom: "8px",
-            left: "18px",
-            fontSize: "20px",
-          }}
-        >
+        <div style={{ position: "absolute", bottom: "8px", left: "18px", fontSize: "20px" }}>
           🌼
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            bottom: "8px",
-            right: "18px",
-            fontSize: "20px",
-          }}
-        >
+        <div style={{ position: "absolute", bottom: "8px", right: "18px", fontSize: "20px" }}>
           🌷
         </div>
 
@@ -207,12 +175,7 @@ function Notifications() {
             FESTIVAL CELEBRATION
           </div>
 
-          <h3
-            style={{
-              margin: "7px 0",
-              fontSize: "20px",
-            }}
-          >
+          <h3 style={{ margin: "7px 0", fontSize: "20px" }}>
             {item.title}
           </h3>
 
@@ -293,47 +256,19 @@ function Notifications() {
           }}
         />
 
-        <div
-          style={{
-            position: "absolute",
-            top: "4px",
-            left: "8px",
-            fontSize: "38px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "4px", left: "8px", fontSize: "38px" }}>
           🎈
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "12px",
-            fontSize: "34px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "20px", right: "12px", fontSize: "34px" }}>
           🎈
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            top: "75px",
-            left: "28px",
-            fontSize: "20px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "75px", left: "28px", fontSize: "20px" }}>
           ✨
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            top: "85px",
-            right: "30px",
-            fontSize: "20px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "85px", right: "30px", fontSize: "20px" }}>
           ⭐
         </div>
 
@@ -365,12 +300,7 @@ function Notifications() {
             BIRTHDAY CELEBRATION
           </div>
 
-          <h3
-            style={{
-              margin: "7px 0",
-              fontSize: "20px",
-            }}
-          >
+          <h3 style={{ margin: "7px 0", fontSize: "20px" }}>
             {item.title}
           </h3>
 
@@ -461,25 +391,11 @@ function Notifications() {
           }}
         />
 
-        <div
-          style={{
-            position: "absolute",
-            top: "12px",
-            left: "15px",
-            fontSize: "24px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "12px", left: "15px", fontSize: "24px" }}>
           ☀️
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            top: "15px",
-            right: "18px",
-            fontSize: "25px",
-          }}
-        >
+        <div style={{ position: "absolute", top: "15px", right: "18px", fontSize: "25px" }}>
           🌈
         </div>
 
@@ -510,12 +426,7 @@ function Notifications() {
             SPECIAL HOLIDAY
           </div>
 
-          <h3
-            style={{
-              margin: "7px 0",
-              fontSize: "20px",
-            }}
-          >
+          <h3 style={{ margin: "7px 0", fontSize: "20px" }}>
             {item.title}
           </h3>
 

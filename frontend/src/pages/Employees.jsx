@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import "../styles/theme.css";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://worknest-backend-xesk.onrender.com";
 
 function Employees() {
   const [employees, setEmployees] = useState([]);
@@ -299,6 +299,7 @@ function Employees() {
                 {uploadingEmail === employee.email
                   ? "Uploading..."
                   : "Profile Image"}
+
                 <input
                   type="file"
                   accept="image/*"
@@ -346,6 +347,7 @@ function Employees() {
                 <p className="panel-label">
                   {editingEmail ? "UPDATE PROFILE" : "NEW TEAM MEMBER"}
                 </p>
+
                 <h2>
                   {editingEmail ? "Edit employee" : "Add employee"}
                 </h2>
@@ -354,6 +356,7 @@ function Employees() {
 
             <form onSubmit={handleSubmit} className="employee-form">
               <label>Full Name</label>
+
               <input
                 type="text"
                 placeholder="Enter employee name"
@@ -365,6 +368,7 @@ function Employees() {
               />
 
               <label>Email Address</label>
+
               <input
                 type="email"
                 placeholder="employee@company.com"
@@ -376,6 +380,7 @@ function Employees() {
               />
 
               <label>Phone Number</label>
+
               <input
                 type="text"
                 placeholder="Enter phone number"
@@ -387,6 +392,7 @@ function Employees() {
               />
 
               <label>Role</label>
+
               <select
                 value={form.role}
                 onChange={(e) =>

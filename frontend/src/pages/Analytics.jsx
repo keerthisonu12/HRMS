@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import "../styles/theme.css";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://worknest-backend-xesk.onrender.com";
 
 function Analytics() {
   const [analytics, setAnalytics] = useState([]);
