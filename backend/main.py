@@ -18,11 +18,13 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="HRMS API")
 
 
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://worknest-hrms-frontend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -30,6 +32,7 @@ app.add_middleware(
 )
 
 
+# API Routers
 app.include_router(router)
 app.include_router(employee_router)
 app.include_router(leave_router)
@@ -62,7 +65,7 @@ def custom_openapi():
         "BearerAuth": {
             "type": "http",
             "scheme": "bearer",
-            "bearerFormat": "JWT"
+            "bearerFormat": "JWT",
         }
     }
 
@@ -71,15 +74,18 @@ def custom_openapi():
         "/send-otp",
         "/login",
         "/logout",
-        "/"
+        "/",
     }
 
     for path, methods in openapi_schema["paths"].items():
         if path not in public_paths:
             for method in methods:
-                methods[method]["security"] = [{"BearerAuth": []}]
+                methods[method]["security"] = [
+                    {"BearerAuth": []}
+                ]
 
     app.openapi_schema = openapi_schema
+
     return app.openapi_schema
 
 
