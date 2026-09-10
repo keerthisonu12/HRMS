@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -9,19 +9,17 @@ import {
 } from "lucide-react";
 import "../styles/theme.css";
 
-const API = "https://worknest-backend-xesk.onrender.com";
+const API = "http://127.0.0.1:8000";
 
 function Login() {
   const [role, setRole] = useState("employee");
-  const [isSignup, setIsSignup] = useState(false);
-
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [message, setMessage] = useState("");
 
+  const otpRefs = useRef([]);
   const navigate = useNavigate();
 
   const sendOtp = async () => {
@@ -29,6 +27,11 @@ function Login() {
       setMessage("Please enter your email");
       return;
     }
+
+    if (sendingOtp) return;
+
+    setSendingOtp(true);
+    setMessage("");
 
     try {
       const response = await fetch(
@@ -46,57 +49,71 @@ function Login() {
       }
 
       setOtpSent(true);
-      setMessage(`OTP sent successfully. Test OTP: ${data.otp}`);
+      setOtp(["", "", "", "", "", ""]);
+
+      setMessage(
+        "Verification OTP sent successfully. Please check your email."
+      );
+
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 100);
     } catch {
       setMessage("Backend connection failed");
+    } finally {
+      setSendingOtp(false);
     }
   };
 
-  const signup = async (e) => {
+  const handleOtpChange = (value, index) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+
+    const newOtp = [...otp];
+    newOtp[index] = digit;
+    setOtp(newOtp);
+
+    if (digit && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
     e.preventDefault();
 
-    if (!name || !phone || !email) {
-      setMessage("Please fill all required fields");
-      return;
-    }
+    const pastedOtp = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
 
-    try {
-      const response = await fetch(`${API}/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          role: "employee",
-        }),
-      });
+    if (!pastedOtp) return;
 
-      const data = await response.json();
+    const newOtp = ["", "", "", "", "", ""];
 
-      if (!response.ok) {
-        setMessage(data.detail || "Signup failed");
-        return;
-      }
+    pastedOtp.split("").forEach((digit, index) => {
+      newOtp[index] = digit;
+    });
 
-      setMessage("Signup successful. Please login with your email.");
-      setIsSignup(false);
-      setName("");
-      setPhone("");
-      setOtp("");
-      setOtpSent(false);
-    } catch {
-      setMessage("Backend connection failed");
-    }
+    setOtp(newOtp);
+
+    setTimeout(() => {
+      const focusIndex = Math.min(pastedOtp.length, 5);
+      otpRefs.current[focusIndex]?.focus();
+    }, 50);
   };
 
   const login = async (e) => {
     e.preventDefault();
 
-    if (!otp) {
-      setMessage("Please enter OTP");
+    const enteredOtp = otp.join("");
+
+    if (enteredOtp.length !== 6) {
+      setMessage("Please enter the complete 6-digit OTP");
       return;
     }
 
@@ -108,7 +125,7 @@ function Login() {
         },
         body: JSON.stringify({
           email,
-          otp,
+          otp: enteredOtp,
         }),
       });
 
@@ -157,92 +174,46 @@ function Login() {
 
         <div className="login-card">
           <div className="login-heading">
-            <p className="eyebrow">
-              {isSignup ? "JOIN WORKNEST" : "WELCOME BACK"}
-            </p>
+            <p className="eyebrow">WELCOME BACK</p>
 
             <h2>
-              {isSignup ? (
-                <>
-                  Build your
-                  <br />
-                  workspace.
-                </>
-              ) : (
-                <>
-                  Work smarter.
-                  <br />
-                  Lead better.
-                </>
-              )}
+              Work smarter.
+              <br />
+              Lead better.
             </h2>
 
             <p>
-              {isSignup
-                ? "Create your employee account securely."
-                : "Access your workspace securely using email verification."}
+              Access your workspace securely using email verification.
             </p>
           </div>
 
-          {!isSignup && (
-            <div className="role-switch">
-              <button
-                className={role === "employee" ? "active" : ""}
-                onClick={() => {
-                  setRole("employee");
-                  setMessage("");
-                }}
-                type="button"
-              >
-                <Users size={18} />
-                Employee
-              </button>
+          <div className="role-switch">
+            <button
+              className={role === "employee" ? "active" : ""}
+              onClick={() => {
+                setRole("employee");
+                setMessage("");
+              }}
+              type="button"
+            >
+              <Users size={18} />
+              Employee
+            </button>
 
-              <button
-                className={role === "hr" ? "active" : ""}
-                onClick={() => {
-                  setRole("hr");
-                  setMessage("");
-                }}
-                type="button"
-              >
-                <BriefcaseBusiness size={18} />
-                HR
-              </button>
-            </div>
-          )}
+            <button
+              className={role === "hr" ? "active" : ""}
+              onClick={() => {
+                setRole("hr");
+                setMessage("");
+              }}
+              type="button"
+            >
+              <BriefcaseBusiness size={18} />
+              HR
+            </button>
+          </div>
 
-          <form onSubmit={isSignup ? signup : login}>
-            {isSignup && (
-              <>
-                <label>Full name</label>
-
-                <div className="input-box">
-                  <Users size={19} />
-
-                  <input
-                    type="text"
-                    placeholder="Your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-
-                <label>Phone number</label>
-
-                <div className="input-box">
-                  <ShieldCheck size={19} />
-
-                  <input
-                    type="tel"
-                    placeholder="Your phone number"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
+          <form onSubmit={login}>
             <label>Email address</label>
 
             <div className="input-box">
@@ -252,59 +223,96 @@ function Login() {
                 type="email"
                 placeholder="you@company.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (!otpSent) {
+                    setMessage("");
+                  }
+                }}
               />
             </div>
 
-            {!isSignup && (
-              <>
-                {!otpSent ? (
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={sendOtp}
-                  >
-                    Send verification OTP
-                    <ArrowRight size={19} />
-                  </button>
-                ) : (
-                  <>
-                    <label>Verification OTP</label>
-
-                    <div className="input-box">
-                      <ShieldCheck size={19} />
-
-                      <input
-                        type="text"
-                        maxLength="6"
-                        placeholder="Enter 6-digit OTP"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                      />
-                    </div>
-
-                    <button type="submit" className="primary-button">
-                      Enter {role === "hr" ? "HR" : "Employee"} Workspace
-                      <ArrowRight size={19} />
-                    </button>
-
-                    <button
-                      type="button"
-                      className="resend-button"
-                      onClick={sendOtp}
-                    >
-                      Resend OTP
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-
-            {isSignup && (
-              <button type="submit" className="primary-button">
-                Create Employee Account
-                <ArrowRight size={19} />
+            {!otpSent ? (
+              <button
+                type="button"
+                className="primary-button"
+                onClick={sendOtp}
+                disabled={sendingOtp}
+                style={{
+                  opacity: sendingOtp ? 0.6 : 1,
+                  cursor: sendingOtp ? "not-allowed" : "pointer",
+                }}
+              >
+                {sendingOtp ? "Sending OTP..." : "Send verification OTP"}
+                {!sendingOtp && <ArrowRight size={19} />}
               </button>
+            ) : (
+              <>
+                <label>Verification OTP</label>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    justifyContent: "center",
+                    margin: "12px 0 20px",
+                  }}
+                  onPaste={handleOtpPaste}
+                >
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => {
+                        otpRefs.current[index] = element;
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) =>
+                        handleOtpChange(e.target.value, index)
+                      }
+                      onKeyDown={(e) =>
+                        handleOtpKeyDown(e, index)
+                      }
+                      style={{
+                        width: "48px",
+                        height: "56px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "9px",
+                        textAlign: "center",
+                        fontSize: "24px",
+                        fontWeight: "600",
+                        outline: "none",
+                        background: "#ffffff",
+                        color: "#1f2937",
+                      }}
+                      aria-label={`OTP digit ${index + 1}`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="submit"
+                  className="primary-button"
+                >
+                  Enter {role === "hr" ? "HR" : "Employee"} Workspace
+                  <ArrowRight size={19} />
+                </button>
+
+                <button
+                  type="button"
+                  className="resend-button"
+                  onClick={sendOtp}
+                  disabled={sendingOtp}
+                  style={{
+                    opacity: sendingOtp ? 0.6 : 1,
+                    cursor: sendingOtp ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {sendingOtp ? "Sending..." : "Resend OTP"}
+                </button>
+              </>
             )}
           </form>
 
@@ -317,23 +325,6 @@ function Login() {
           <div className="security-note">
             <ShieldCheck size={17} />
             Secure email-based authentication
-          </div>
-
-          <div style={{ textAlign: "center", marginTop: "18px" }}>
-            <button
-              type="button"
-              className="resend-button"
-              onClick={() => {
-                setIsSignup(!isSignup);
-                setMessage("");
-                setOtpSent(false);
-                setOtp("");
-              }}
-            >
-              {isSignup
-                ? "Already have an account? Login"
-                : "New employee? Create an account"}
-            </button>
           </div>
         </div>
 

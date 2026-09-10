@@ -10,10 +10,14 @@ import {
   Phone,
   ShieldCheck,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import "../styles/theme.css";
 
-const API = "https://worknest-backend-xesk.onrender.com";
+const API = "http://127.0.0.1:8000";
 
 function Employees() {
   const [employees, setEmployees] = useState([]);
@@ -22,6 +26,9 @@ function Employees() {
   const [editingEmail, setEditingEmail] = useState(null);
   const [message, setMessage] = useState("");
   const [uploadingEmail, setUploadingEmail] = useState(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const employeesPerPage = 6;
 
   const [form, setForm] = useState({
     name: "",
@@ -34,7 +41,9 @@ function Employees() {
     const token = localStorage.getItem("authToken");
 
     return {
-      ...(includeJson ? { "Content-Type": "application/json" } : {}),
+      ...(includeJson
+        ? { "Content-Type": "application/json" }
+        : {}),
       Authorization: `Bearer ${token}`,
     };
   };
@@ -42,13 +51,15 @@ function Employees() {
   const loadEmployees = async () => {
     try {
       const response = await fetch(`${API}/employees/`, {
+        method: "GET",
         headers: getHeaders(),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setEmployees(data);
+        setEmployees(Array.isArray(data) ? data : []);
+        setMessage("");
       } else {
         setMessage(data.detail || "Unable to load employees");
       }
@@ -68,6 +79,7 @@ function Employees() {
       phone: "",
       role: "employee",
     });
+
     setEditingEmail(null);
     setShowForm(false);
   };
@@ -101,6 +113,7 @@ function Employees() {
       );
 
       resetForm();
+      setCurrentPage(1);
       loadEmployees();
     } catch {
       setMessage("Backend connection failed");
@@ -111,7 +124,7 @@ function Employees() {
     setForm({
       name: employee.name || "",
       email: employee.email || "",
-      phone: employee.phone || "",
+      phone: employee.phone || employee.phone_number || "",
       role: employee.role || "employee",
     });
 
@@ -174,7 +187,9 @@ function Employees() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.detail || "Profile image upload failed");
+        setMessage(
+          data.detail || "Profile image upload failed"
+        );
         return;
       }
 
@@ -187,63 +202,215 @@ function Employees() {
     }
   };
 
-  const filteredEmployees = employees.filter((employee) => {
-    const text = `${employee.name} ${employee.email} ${employee.phone} ${employee.role}`;
-    return text.toLowerCase().includes(search.toLowerCase());
-  });
+  const filteredEmployees = employees.filter((employee) =>
+    (employee.name || "")
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
+  const exportToExcel = () => {
+    if (employees.length === 0) {
+      setMessage("No employee data available to export");
+      return;
+    }
+
+    const exportData = employees.map((employee) => ({
+      "Employee ID": employee.id || "",
+      Name: employee.name || "",
+      Email: employee.email || "",
+      Phone: employee.phone || employee.phone_number || "",
+      Role: employee.role === "hr" ? "HR" : "Employee",
+      "Profile Image": employee.profile_image || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Employees"
+    );
+
+    XLSX.writeFile(
+      workbook,
+      "WORKNEST_Employees.xlsx"
+    );
+
+    setMessage(
+      "Employee data exported to Excel successfully"
+    );
+  };
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredEmployees.length / employeesPerPage
+    )
+  );
+
+  const startIndex =
+    (currentPage - 1) * employeesPerPage;
+
+  const currentEmployees = filteredEmployees.slice(
+    startIndex,
+    startIndex + employeesPerPage
+  );
+
+  const handleSearch = (value) => {
+    setSearch(value);
+    setCurrentPage(1);
+  };
+
+  const previousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   return (
-    <div className="employees-page">
+    <div
+      className="employees-page"
+      style={{
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflowX: "hidden",
+      }}
+    >
       <div className="employees-header">
-        <div>
-          <p className="dashboard-eyebrow">PEOPLE MANAGEMENT</p>
+        <div style={{ minWidth: 0 }}>
+          <p className="dashboard-eyebrow">
+            PEOPLE MANAGEMENT
+          </p>
+
           <h1>Employees</h1>
+
           <p className="dashboard-subtitle">
             Manage your organization's people from one place.
           </p>
         </div>
 
-        <button
-          className="primary-button employees-add-button"
-          onClick={() => {
-            resetForm();
-            setShowForm(true);
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexWrap: "wrap",
           }}
         >
-          <Plus size={18} />
-          Add Employee
-        </button>
+          <button
+            className="primary-button employees-add-button"
+            onClick={exportToExcel}
+            style={{
+              background: "#168a5b",
+              marginTop: "0",
+              width: "auto",
+              flexShrink: 0,
+            }}
+          >
+            <FileSpreadsheet size={18} />
+            Export Excel
+          </button>
+
+          <button
+            className="primary-button employees-add-button"
+            onClick={() => {
+              resetForm();
+              setShowForm(true);
+            }}
+            style={{
+              marginTop: "0",
+              width: "auto",
+              flexShrink: 0,
+            }}
+          >
+            <Plus size={18} />
+            Add Employee
+          </button>
+        </div>
       </div>
 
       <div className="employees-toolbar">
         <div className="employee-search">
           <Search size={18} />
+
           <input
             type="text"
-            placeholder="Search employees..."
+            placeholder="Search by employee name..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              handleSearch(e.target.value)
+            }
           />
         </div>
 
         <div className="employee-count">
           <Users size={17} />
-          {employees.length} Employees
+          {filteredEmployees.length} Employees
         </div>
       </div>
 
-      {message && <div className="login-message">{message}</div>}
+      {message && (
+        <div className="login-message">
+          {message}
+        </div>
+      )}
 
-      <div className="employees-grid">
-        {filteredEmployees.length === 0 ? (
+      <div
+        className="employees-grid"
+        style={{
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
+        {currentEmployees.length === 0 ? (
           <div className="empty-employees">
             <Users size={40} />
+
             <h3>No employees found</h3>
-            <p>Add your first employee to get started.</p>
+
+            <p>
+              {search
+                ? "Try searching with another employee name."
+                : "Add your first employee to get started."}
+            </p>
           </div>
         ) : (
-          filteredEmployees.map((employee) => (
-            <div className="employee-card" key={employee.email}>
+          currentEmployees.map((employee) => (
+            <div
+              className="employee-card"
+              key={employee.email}
+              style={{
+                minWidth: 0,
+                width: "100%",
+              }}
+            >
               <div className="employee-card-top">
                 <div className="employee-avatar">
                   {employee.profile_image ? (
@@ -258,7 +425,9 @@ function Employees() {
                       }}
                     />
                   ) : (
-                    employee.name?.charAt(0)?.toUpperCase() || "U"
+                    employee.name
+                      ?.charAt(0)
+                      ?.toUpperCase() || "U"
                   )}
                 </div>
 
@@ -269,7 +438,9 @@ function Employees() {
                       : "employee-role"
                   }
                 >
-                  {employee.role === "hr" ? "HR" : "Employee"}
+                  {employee.role === "hr"
+                    ? "HR"
+                    : "Employee"}
                 </span>
               </div>
 
@@ -277,12 +448,24 @@ function Employees() {
 
               <div className="employee-detail">
                 <Mail size={15} />
-                <span>{employee.email}</span>
+
+                <span
+                  style={{
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {employee.email}
+                </span>
               </div>
 
               <div className="employee-detail">
                 <Phone size={15} />
-                <span>{employee.phone}</span>
+
+                <span>
+                  {employee.phone ||
+                    employee.phone_number ||
+                    "Not available"}
+                </span>
               </div>
 
               <label
@@ -293,9 +476,11 @@ function Employees() {
                   marginTop: "10px",
                   cursor: "pointer",
                   fontSize: "13px",
+                  maxWidth: "100%",
                 }}
               >
                 <Camera size={15} />
+
                 {uploadingEmail === employee.email
                   ? "Uploading..."
                   : "Profile Image"}
@@ -304,23 +489,35 @@ function Employees() {
                   type="file"
                   accept="image/*"
                   hidden
-                  disabled={uploadingEmail === employee.email}
+                  disabled={
+                    uploadingEmail === employee.email
+                  }
                   onChange={(e) => {
-                    uploadProfileImage(employee.email, e.target.files[0]);
+                    uploadProfileImage(
+                      employee.email,
+                      e.target.files[0]
+                    );
+
                     e.target.value = "";
                   }}
                 />
               </label>
 
               <div className="employee-actions">
-                <button onClick={() => editEmployee(employee)}>
+                <button
+                  onClick={() =>
+                    editEmployee(employee)
+                  }
+                >
                   <Pencil size={15} />
                   Edit
                 </button>
 
                 <button
                   className="delete-action"
-                  onClick={() => deleteEmployee(employee.email)}
+                  onClick={() =>
+                    deleteEmployee(employee.email)
+                  }
                 >
                   <Trash2 size={15} />
                   Delete
@@ -331,10 +528,117 @@ function Employees() {
         )}
       </div>
 
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          marginTop: "25px",
+          marginBottom: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={previousPage}
+          disabled={currentPage === 1}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "9px 14px",
+            borderRadius: "9px",
+            border: "1px solid #e1e2e9",
+            background:
+              currentPage === 1
+                ? "#f3f3f6"
+                : "#ffffff",
+            color:
+              currentPage === 1
+                ? "#aaa"
+                : "#6254e9",
+            cursor:
+              currentPage === 1
+                ? "not-allowed"
+                : "pointer",
+            fontSize: "13px",
+            fontWeight: "600",
+          }}
+        >
+          <ChevronLeft size={16} />
+          Previous
+        </button>
+
+        {Array.from(
+          { length: totalPages },
+          (_, index) => index + 1
+        ).map((page) => (
+          <button
+            key={page}
+            onClick={() => goToPage(page)}
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "9px",
+              border:
+                currentPage === page
+                  ? "1px solid #6254e9"
+                  : "1px solid #e1e2e9",
+              background:
+                currentPage === page
+                  ? "#6254e9"
+                  : "#ffffff",
+              color:
+                currentPage === page
+                  ? "#ffffff"
+                  : "#59647b",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: "600",
+            }}
+          >
+            {page}
+          </button>
+        ))}
+
+        <button
+          onClick={nextPage}
+          disabled={currentPage === totalPages}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "9px 14px",
+            borderRadius: "9px",
+            border: "1px solid #e1e2e9",
+            background:
+              currentPage === totalPages
+                ? "#f3f3f6"
+                : "#ffffff",
+            color:
+              currentPage === totalPages
+                ? "#aaa"
+                : "#6254e9",
+            cursor:
+              currentPage === totalPages
+                ? "not-allowed"
+                : "pointer",
+            fontSize: "13px",
+            fontWeight: "600",
+          }}
+        >
+          Next
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
       {showForm && (
         <div className="employee-modal-overlay">
           <div className="employee-modal">
-            <button className="modal-close" onClick={resetForm}>
+            <button
+              className="modal-close"
+              onClick={resetForm}
+            >
               <X size={20} />
             </button>
 
@@ -345,16 +649,23 @@ function Employees() {
 
               <div>
                 <p className="panel-label">
-                  {editingEmail ? "UPDATE PROFILE" : "NEW TEAM MEMBER"}
+                  {editingEmail
+                    ? "UPDATE PROFILE"
+                    : "NEW TEAM MEMBER"}
                 </p>
 
                 <h2>
-                  {editingEmail ? "Edit employee" : "Add employee"}
+                  {editingEmail
+                    ? "Edit employee"
+                    : "Add employee"}
                 </h2>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="employee-form">
+            <form
+              onSubmit={handleSubmit}
+              className="employee-form"
+            >
               <label>Full Name</label>
 
               <input
@@ -362,7 +673,10 @@ function Employees() {
                 placeholder="Enter employee name"
                 value={form.name}
                 onChange={(e) =>
-                  setForm({ ...form, name: e.target.value })
+                  setForm({
+                    ...form,
+                    name: e.target.value,
+                  })
                 }
                 required
               />
@@ -374,7 +688,10 @@ function Employees() {
                 placeholder="employee@company.com"
                 value={form.email}
                 onChange={(e) =>
-                  setForm({ ...form, email: e.target.value })
+                  setForm({
+                    ...form,
+                    email: e.target.value,
+                  })
                 }
                 required
               />
@@ -386,7 +703,10 @@ function Employees() {
                 placeholder="Enter phone number"
                 value={form.phone}
                 onChange={(e) =>
-                  setForm({ ...form, phone: e.target.value })
+                  setForm({
+                    ...form,
+                    phone: e.target.value,
+                  })
                 }
                 required
               />
@@ -396,15 +716,31 @@ function Employees() {
               <select
                 value={form.role}
                 onChange={(e) =>
-                  setForm({ ...form, role: e.target.value })
+                  setForm({
+                    ...form,
+                    role: e.target.value,
+                  })
                 }
               >
-                <option value="employee">Employee</option>
-                <option value="hr">HR</option>
+                <option value="employee">
+                  Employee
+                </option>
+
+                <option value="hr">
+                  HR
+                </option>
               </select>
 
-              <button type="submit" className="primary-button">
-                {editingEmail ? "Update Employee" : "Add Employee"}
+              <button
+                type="submit"
+                className="primary-button"
+                style={{
+                  marginTop: "0",
+                }}
+              >
+                {editingEmail
+                  ? "Update Employee"
+                  : "Add Employee"}
               </button>
             </form>
           </div>

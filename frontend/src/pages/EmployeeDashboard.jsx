@@ -7,12 +7,11 @@ import {
   FileText,
   CalendarDays,
   Bell,
-  LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../styles/theme.css";
 
-const API = "https://worknest-backend-xesk.onrender.com";
+const API = "http://127.0.0.1:8000";
 
 function EmployeeDashboard() {
   const email = localStorage.getItem("userEmail");
@@ -28,27 +27,6 @@ function EmployeeDashboard() {
 
   const headers = {
     Authorization: `Bearer ${token}`,
-  };
-
-  const logout = async () => {
-    try {
-      if (token) {
-        await fetch(`${API}/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-    } catch {
-      // Continue logout even if backend is unavailable
-    }
-
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("authToken");
-
-    navigate("/login");
   };
 
   useEffect(() => {
@@ -69,7 +47,10 @@ function EmployeeDashboard() {
         );
 
         if (projectResponse.ok) {
-          setProjects(await projectResponse.json());
+          const projectData = await projectResponse.json();
+          setProjects(
+            Array.isArray(projectData) ? projectData : []
+          );
         }
 
         const reportResponse = await fetch(
@@ -78,7 +59,10 @@ function EmployeeDashboard() {
         );
 
         if (reportResponse.ok) {
-          setReports(await reportResponse.json());
+          const reportData = await reportResponse.json();
+          setReports(
+            Array.isArray(reportData) ? reportData : []
+          );
         }
 
         const leaveResponse = await fetch(`${API}/leaves/`, {
@@ -89,7 +73,13 @@ function EmployeeDashboard() {
           const leaveData = await leaveResponse.json();
 
           setLeaves(
-            leaveData.filter((leave) => leave.email === email)
+            Array.isArray(leaveData)
+              ? leaveData.filter(
+                  (leave) =>
+                    leave.email?.toLowerCase() ===
+                    email?.toLowerCase()
+                )
+              : []
           );
         }
 
@@ -99,7 +89,14 @@ function EmployeeDashboard() {
         );
 
         if (notificationResponse.ok) {
-          setNotifications(await notificationResponse.json());
+          const notificationData =
+            await notificationResponse.json();
+
+          setNotifications(
+            Array.isArray(notificationData)
+              ? notificationData
+              : []
+          );
         }
       } catch {
         setMessage("Backend connection failed");
@@ -111,42 +108,10 @@ function EmployeeDashboard() {
     }
   }, [email, token]);
 
-  return (
-    <div className="employees-page">
-      <div className="employees-header">
-        <div>
-          <p className="dashboard-eyebrow">EMPLOYEE WORKSPACE</p>
-
-          <h1>
-            Welcome, {employee?.name || "Employee"}
-          </h1>
-
-          <p className="dashboard-subtitle">
-            Your personal WORKNEST workspace.
-          </p>
-        </div>
-
-        <button
-          className="primary-button"
-          onClick={logout}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <LogOut size={17} />
-          Logout
-        </button>
-      </div>
-
-      {message && (
-        <div className="login-message">
-          {message}
-        </div>
-      )}
-
-      <div className="employees-grid">
+  const dashboardCards = [
+    {
+      id: "profile",
+      content: (
         <div className="employee-card">
           <div className="employee-card-top">
             <div
@@ -171,7 +136,9 @@ function EmployeeDashboard() {
                   }}
                 />
               ) : (
-                employee?.name?.charAt(0)?.toUpperCase() || "U"
+                employee?.name
+                  ?.charAt(0)
+                  ?.toUpperCase() || "U"
               )}
             </div>
 
@@ -184,20 +151,33 @@ function EmployeeDashboard() {
 
           <div className="employee-detail">
             <Users size={15} />
-            <span>{employee?.name || "Loading..."}</span>
+            <span>
+              {employee?.name || "Loading..."}
+            </span>
           </div>
 
           <div className="employee-detail">
             <Mail size={15} />
-            <span>{employee?.email || email}</span>
+            <span>
+              {employee?.email || email}
+            </span>
           </div>
 
           <div className="employee-detail">
             <Phone size={15} />
-            <span>{employee?.phone || "Not available"}</span>
+            <span>
+              {employee?.phone ||
+                employee?.phone_number ||
+                "Not available"}
+            </span>
           </div>
         </div>
+      ),
+    },
 
+    {
+      id: "projects",
+      content: (
         <div className="employee-card">
           <div className="employee-card-top">
             <div className="employee-avatar">
@@ -221,13 +201,21 @@ function EmployeeDashboard() {
 
           <button
             className="primary-button"
-            style={{ marginTop: "15px" }}
+            style={{
+              marginTop: "15px",
+              maxWidth: "100%",
+            }}
             onClick={() => navigate("/projects")}
           >
             View Projects
           </button>
         </div>
+      ),
+    },
 
+    {
+      id: "reports",
+      content: (
         <div className="employee-card">
           <div className="employee-card-top">
             <div className="employee-avatar">
@@ -251,13 +239,21 @@ function EmployeeDashboard() {
 
           <button
             className="primary-button"
-            style={{ marginTop: "15px" }}
+            style={{
+              marginTop: "15px",
+              maxWidth: "100%",
+            }}
             onClick={() => navigate("/reports")}
           >
             View Reports
           </button>
         </div>
+      ),
+    },
 
+    {
+      id: "leaves",
+      content: (
         <div className="employee-card">
           <div className="employee-card-top">
             <div className="employee-avatar">
@@ -281,13 +277,21 @@ function EmployeeDashboard() {
 
           <button
             className="primary-button"
-            style={{ marginTop: "15px" }}
+            style={{
+              marginTop: "15px",
+              maxWidth: "100%",
+            }}
             onClick={() => navigate("/leaves")}
           >
             Manage Leave
           </button>
         </div>
+      ),
+    },
 
+    {
+      id: "notifications",
+      content: (
         <div className="employee-card">
           <div className="employee-card-top">
             <div className="employee-avatar">
@@ -311,12 +315,71 @@ function EmployeeDashboard() {
 
           <button
             className="primary-button"
-            style={{ marginTop: "15px" }}
-            onClick={() => navigate("/notifications")}
+            style={{
+              marginTop: "15px",
+              maxWidth: "100%",
+            }}
+            onClick={() =>
+              navigate("/notifications")
+            }
           >
             View Notifications
           </button>
         </div>
+      ),
+    },
+  ];
+
+  return (
+    <div
+      className="employees-page"
+      style={{
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflowX: "hidden",
+      }}
+    >
+      <div className="employees-header">
+        <div style={{ minWidth: 0 }}>
+          <p className="dashboard-eyebrow">
+            EMPLOYEE WORKSPACE
+          </p>
+
+          <h1>
+            Welcome, {employee?.name || "Employee"}
+          </h1>
+
+          <p className="dashboard-subtitle">
+            Your personal WORKNEST workspace.
+          </p>
+        </div>
+      </div>
+
+      {message && (
+        <div className="login-message">
+          {message}
+        </div>
+      )}
+
+      <div
+        className="employees-grid"
+        style={{
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
+        {dashboardCards.map((card) => (
+          <div
+            key={card.id}
+            style={{
+              minWidth: 0,
+              width: "100%",
+            }}
+          >
+            {card.content}
+          </div>
+        ))}
       </div>
     </div>
   );

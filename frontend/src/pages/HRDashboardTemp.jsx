@@ -2,138 +2,220 @@ import {
   Users,
   BriefcaseBusiness,
   CalendarDays,
-  FileText,
   TrendingUp,
-  Bell,
-  LogOut,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/theme.css";
 
-const API = "https://worknest-backend-xesk.onrender.com";
+const API = "http://127.0.0.1:8000";
 
 function HRDashboard() {
   const navigate = useNavigate();
 
-  const logout = async () => {
+  const [employees, setEmployees] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [reports, setReports] = useState([]);
+
+  const [performancePage, setPerformancePage] = useState(1);
+  const [leavePage, setLeavePage] = useState(1);
+
+  const itemsPerPage = 3;
+
+  const loadDashboardData = async () => {
     const token = localStorage.getItem("authToken");
 
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
     try {
-      if (token) {
-        await fetch(`${API}/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const [
+        employeesRes,
+        projectsRes,
+        leavesRes,
+        reportsRes,
+      ] = await Promise.all([
+        fetch(`${API}/employees/`, { headers }),
+        fetch(`${API}/projects/`, { headers }),
+        fetch(`${API}/leaves/`, { headers }),
+        fetch(`${API}/reports/`, { headers }),
+      ]);
+
+      const employeesData = await employeesRes.json();
+      const projectsData = await projectsRes.json();
+      const leavesData = await leavesRes.json();
+      const reportsData = await reportsRes.json();
+
+      if (employeesRes.ok) {
+        setEmployees(Array.isArray(employeesData) ? employeesData : []);
+      }
+
+      if (projectsRes.ok) {
+        setProjects(Array.isArray(projectsData) ? projectsData : []);
+      }
+
+      if (leavesRes.ok) {
+        setLeaves(Array.isArray(leavesData) ? leavesData : []);
+      }
+
+      if (reportsRes.ok) {
+        setReports(Array.isArray(reportsData) ? reportsData : []);
       }
     } catch {
-      // Continue logout even if backend is unavailable
+      setEmployees([]);
+      setProjects([]);
+      setLeaves([]);
+      setReports([]);
     }
+  };
 
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("authToken");
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-    navigate("/login");
+  const activeProjects = projects.filter(
+    (project) => project.status?.toLowerCase() === "active"
+  );
+
+  const pendingLeaves = leaves.filter(
+    (leave) => leave.status?.toLowerCase() === "pending"
+  );
+
+  const employeesWithReports = new Set(
+    reports.map((report) => report.employee_email)
+  );
+
+  const productivity =
+    employees.length > 0
+      ? Math.round((employeesWithReports.size / employees.length) * 100)
+      : 0;
+
+  const employeeReportCounts = {};
+
+  reports.forEach((report) => {
+    const email = report.employee_email;
+
+    if (!email) return;
+
+    employeeReportCounts[email] =
+      (employeeReportCounts[email] || 0) + 1;
+  });
+
+  const performanceData = Object.entries(employeeReportCounts).sort(
+    (a, b) => b[1] - a[1]
+  );
+
+  const maxReports =
+    performanceData.length > 0
+      ? Math.max(...performanceData.map((item) => item[1]))
+      : 0;
+
+  const getEmployeeName = (email) => {
+    const employee = employees.find(
+      (item) =>
+        item.email?.toLowerCase() === email?.toLowerCase()
+    );
+
+    return employee?.name || email;
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "HR";
+
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
+  const performanceTotalPages = Math.ceil(
+    performanceData.length / itemsPerPage
+  );
+
+  const performanceStartIndex =
+    (performancePage - 1) * itemsPerPage;
+
+  const currentPerformanceData = performanceData.slice(
+    performanceStartIndex,
+    performanceStartIndex + itemsPerPage
+  );
+
+  const leaveTotalPages = Math.ceil(
+    pendingLeaves.length / itemsPerPage
+  );
+
+  const leaveStartIndex =
+    (leavePage - 1) * itemsPerPage;
+
+  const currentLeaves = pendingLeaves.slice(
+    leaveStartIndex,
+    leaveStartIndex + itemsPerPage
+  );
+
+  const previousPerformancePage = () => {
+    if (performancePage > 1) {
+      setPerformancePage(performancePage - 1);
+    }
+  };
+
+  const nextPerformancePage = () => {
+    if (performancePage < performanceTotalPages) {
+      setPerformancePage(performancePage + 1);
+    }
+  };
+
+  const previousLeavePage = () => {
+    if (leavePage > 1) {
+      setLeavePage(leavePage - 1);
+    }
+  };
+
+  const nextLeavePage = () => {
+    if (leavePage < leaveTotalPages) {
+      setLeavePage(leavePage + 1);
+    }
   };
 
   return (
-    <div className="dashboard-page">
-      <aside className="dashboard-sidebar">
-        <div className="side-brand">
-          <div className="side-logo">
-            <BriefcaseBusiness size={22} />
-          </div>
-          <strong>WORKNEST</strong>
-        </div>
-
-        <div className="side-menu">
-          <button
-            className="menu-item active"
-            onClick={() => navigate("/hr-dashboard")}
-          >
-            <TrendingUp size={18} />
-            Overview
-          </button>
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/employees")}
-          >
-            <Users size={18} />
-            Employees
-          </button>
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/leaves")}
-          >
-            <CalendarDays size={18} />
-            Leave Requests
-          </button>
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/projects")}
-          >
-            <BriefcaseBusiness size={18} />
-            Projects
-          </button>
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/reports")}
-          >
-            <FileText size={18} />
-            Work Reports
-          </button>
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/notifications")}
-          >
-            <Bell size={18} />
-            Notifications
-          </button>
-        </div>
-
-        <button className="logout-button" onClick={logout}>
-          <LogOut size={18} />
-          Logout
-        </button>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div>
-            <p className="dashboard-eyebrow">HR CONTROL CENTER</p>
-            <h1>Good morning, HR 👋</h1>
-            <p className="dashboard-subtitle">
-              Here's what's happening across your organization.
-            </p>
-          </div>
-
-          <div className="header-profile">
-            <div className="notification-icon">
-              <Bell size={19} />
-              <span>3</span>
-            </div>
-
-            <div className="profile-avatar">HR</div>
-          </div>
-        </header>
-
+    <div
+      className="dashboard-page"
+      style={{
+        width: "100%",
+        maxWidth: "none",
+        minWidth: 0,
+        margin: 0,
+        padding: 0,
+        overflowX: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
+      <main
+        className="dashboard-main"
+        style={{
+          width: "100%",
+          maxWidth: "none",
+          minWidth: 0,
+          margin: 0,
+          boxSizing: "border-box",
+        }}
+      >
         <section className="stat-grid">
           <div className="stat-card purple">
             <div className="stat-icon">
               <Users size={21} />
             </div>
             <span>Total Employees</span>
-            <strong>48</strong>
+            <strong>{employees.length}</strong>
             <small>
-              <ArrowUpRight size={13} /> 8.4% this month
+              <ArrowUpRight size={13} />
+              Current employees
             </small>
           </div>
 
@@ -142,9 +224,10 @@ function HRDashboard() {
               <BriefcaseBusiness size={21} />
             </div>
             <span>Active Projects</span>
-            <strong>12</strong>
+            <strong>{activeProjects.length}</strong>
             <small>
-              <ArrowUpRight size={13} /> 3 new projects
+              <ArrowUpRight size={13} />
+              Currently active
             </small>
           </div>
 
@@ -153,7 +236,7 @@ function HRDashboard() {
               <CalendarDays size={21} />
             </div>
             <span>Leave Requests</span>
-            <strong>07</strong>
+            <strong>{pendingLeaves.length}</strong>
             <small>Needs your attention</small>
           </div>
 
@@ -162,9 +245,10 @@ function HRDashboard() {
               <TrendingUp size={21} />
             </div>
             <span>Average Productivity</span>
-            <strong>82%</strong>
+            <strong>{productivity}%</strong>
             <small>
-              <ArrowUpRight size={13} /> 5.2% improvement
+              <ArrowUpRight size={13} />
+              Report activity
             </small>
           </div>
         </section>
@@ -174,7 +258,7 @@ function HRDashboard() {
             <div className="panel-heading">
               <div>
                 <p className="panel-label">WORK ANALYTICS</p>
-                <h2>Team performance</h2>
+                <h2>Employee performance</h2>
               </div>
 
               <button
@@ -186,45 +270,162 @@ function HRDashboard() {
             </div>
 
             <div className="performance-list">
-              <div className="performance-row">
-                <div>
-                  <strong>Development Team</strong>
-                  <span>24 reports</span>
+              {currentPerformanceData.length === 0 ? (
+                <div className="performance-row">
+                  <div>
+                    <strong>No work reports yet</strong>
+                    <span>Reports will appear here</span>
+                  </div>
+
+                  <div className="progress">
+                    <div style={{ width: "0%" }}></div>
+                  </div>
+
+                  <b>0%</b>
                 </div>
+              ) : (
+                currentPerformanceData.map(([email, count]) => {
+                  const percentage =
+                    maxReports > 0
+                      ? Math.round((count / maxReports) * 100)
+                      : 0;
 
-                <div className="progress">
-                  <div style={{ width: "91%" }}></div>
-                </div>
+                  return (
+                    <div
+                      className="performance-row"
+                      key={email}
+                    >
+                      <div>
+                        <strong>{getEmployeeName(email)}</strong>
+                        <span>
+                          {count}{" "}
+                          {count === 1 ? "report" : "reports"}
+                        </span>
+                      </div>
 
-                <b>91%</b>
-              </div>
+                      <div className="progress">
+                        <div
+                          style={{
+                            width: `${percentage}%`,
+                          }}
+                        ></div>
+                      </div>
 
-              <div className="performance-row">
-                <div>
-                  <strong>Design Team</strong>
-                  <span>18 reports</span>
-                </div>
-
-                <div className="progress">
-                  <div style={{ width: "84%" }}></div>
-                </div>
-
-                <b>84%</b>
-              </div>
-
-              <div className="performance-row">
-                <div>
-                  <strong>Marketing Team</strong>
-                  <span>15 reports</span>
-                </div>
-
-                <div className="progress">
-                  <div style={{ width: "76%" }}></div>
-                </div>
-
-                <b>76%</b>
-              </div>
+                      <b>{percentage}%</b>
+                    </div>
+                  );
+                })
+              )}
             </div>
+
+            {performanceTotalPages > 1 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "7px",
+                  marginTop: "16px",
+                  paddingTop: "12px",
+                  borderTop: "1px solid #eeeef5",
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  onClick={previousPerformancePage}
+                  disabled={performancePage === 1}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    border: "1px solid #e1e2e9",
+                    background:
+                      performancePage === 1
+                        ? "#f5f5f7"
+                        : "#ffffff",
+                    color:
+                      performancePage === 1
+                        ? "#aaa"
+                        : "#6254d8",
+                    cursor:
+                      performancePage === 1
+                        ? "not-allowed"
+                        : "pointer",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                  }}
+                >
+                  <ChevronLeft size={14} />
+                  Previous
+                </button>
+
+                {Array.from(
+                  { length: performanceTotalPages },
+                  (_, index) => index + 1
+                ).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setPerformancePage(page)}
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "8px",
+                      border:
+                        performancePage === page
+                          ? "1px solid #6254d8"
+                          : "1px solid #e1e2e9",
+                      background:
+                        performancePage === page
+                          ? "#6254d8"
+                          : "#ffffff",
+                      color:
+                        performancePage === page
+                          ? "#ffffff"
+                          : "#59647b",
+                      cursor: "pointer",
+                      fontSize: "11px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={nextPerformancePage}
+                  disabled={
+                    performancePage === performanceTotalPages
+                  }
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    border: "1px solid #e1e2e9",
+                    background:
+                      performancePage === performanceTotalPages
+                        ? "#f5f5f7"
+                        : "#ffffff",
+                    color:
+                      performancePage === performanceTotalPages
+                        ? "#aaa"
+                        : "#6254d8",
+                    cursor:
+                      performancePage === performanceTotalPages
+                        ? "not-allowed"
+                        : "pointer",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="panel leave-panel">
@@ -237,27 +438,155 @@ function HRDashboard() {
               <CalendarDays size={20} />
             </div>
 
-            <div className="leave-preview">
-              <div className="mini-avatar">AK</div>
+            {currentLeaves.length === 0 ? (
+              <div className="leave-preview">
+                <div className="mini-avatar">✓</div>
 
-              <div>
-                <strong>Alex Kumar</strong>
-                <span>2 days • Personal leave</span>
+                <div>
+                  <strong>No pending requests</strong>
+                  <span>All leave requests are handled</span>
+                </div>
               </div>
+            ) : (
+              currentLeaves.map((leave) => {
+                const employee = employees.find(
+                  (item) =>
+                    item.email?.toLowerCase() ===
+                    leave.email?.toLowerCase()
+                );
 
-              <span className="pending">Pending</span>
-            </div>
+                const employeeName =
+                  employee?.name || leave.email;
 
-            <div className="leave-preview">
-              <div className="mini-avatar">RS</div>
+                return (
+                  <div
+                    className="leave-preview"
+                    key={leave.id}
+                  >
+                    <div className="mini-avatar">
+                      {getInitials(employeeName)}
+                    </div>
 
-              <div>
-                <strong>Riya Sharma</strong>
-                <span>1 day • Medical leave</span>
+                    <div>
+                      <strong>{employeeName}</strong>
+
+                      <span>
+                        {leave.start_date} → {leave.end_date}
+                      </span>
+                    </div>
+
+                    <span className="pending">Pending</span>
+                  </div>
+                );
+              })
+            )}
+
+            {leaveTotalPages > 1 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "7px",
+                  marginTop: "12px",
+                  paddingTop: "10px",
+                  borderTop: "1px solid #eeeef5",
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  onClick={previousLeavePage}
+                  disabled={leavePage === 1}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "6px 9px",
+                    borderRadius: "8px",
+                    border: "1px solid #e1e2e9",
+                    background:
+                      leavePage === 1
+                        ? "#f5f5f7"
+                        : "#ffffff",
+                    color:
+                      leavePage === 1
+                        ? "#aaa"
+                        : "#6254d8",
+                    cursor:
+                      leavePage === 1
+                        ? "not-allowed"
+                        : "pointer",
+                    fontSize: "10px",
+                    fontWeight: "600",
+                  }}
+                >
+                  <ChevronLeft size={13} />
+                  Previous
+                </button>
+
+                {Array.from(
+                  { length: leaveTotalPages },
+                  (_, index) => index + 1
+                ).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setLeavePage(page)}
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "8px",
+                      border:
+                        leavePage === page
+                          ? "1px solid #6254d8"
+                          : "1px solid #e1e2e9",
+                      background:
+                        leavePage === page
+                          ? "#6254d8"
+                          : "#ffffff",
+                      color:
+                        leavePage === page
+                          ? "#ffffff"
+                          : "#59647b",
+                      cursor: "pointer",
+                      fontSize: "10px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={nextLeavePage}
+                  disabled={leavePage === leaveTotalPages}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "6px 9px",
+                    borderRadius: "8px",
+                    border: "1px solid #e1e2e9",
+                    background:
+                      leavePage === leaveTotalPages
+                        ? "#f5f5f7"
+                        : "#ffffff",
+                    color:
+                      leavePage === leaveTotalPages
+                        ? "#aaa"
+                        : "#6254d8",
+                    cursor:
+                      leavePage === leaveTotalPages
+                        ? "not-allowed"
+                        : "pointer",
+                    fontSize: "10px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Next
+                  <ChevronRight size={13} />
+                </button>
               </div>
-
-              <span className="pending">Pending</span>
-            </div>
+            )}
 
             <button
               className="full-button"
@@ -271,10 +600,12 @@ function HRDashboard() {
         <section className="welcome-banner">
           <div>
             <p>WORKNEST INSIGHT</p>
+
             <h2>Your people are your strongest asset.</h2>
+
             <span>
-              Track performance, projects and employee wellbeing
-              from one intelligent workspace.
+              Track performance, projects and employee
+              wellbeing from one intelligent workspace.
             </span>
           </div>
 

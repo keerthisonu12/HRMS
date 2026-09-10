@@ -1,13 +1,17 @@
 from functools import wraps
+
 from fastapi import HTTPException, Request
 
 from auth import get_session
 
 
 def role_required(required_role):
+
     def decorator(func):
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
+
             request = kwargs.get("request")
 
             if not isinstance(request, Request):
@@ -30,7 +34,11 @@ def role_required(required_role):
                     detail="Invalid authentication token"
                 )
 
-            token = authorization.replace("Bearer ", "", 1).strip()
+            token = authorization.replace(
+                "Bearer ",
+                "",
+                1
+            ).strip()
 
             session = get_session(token)
 
